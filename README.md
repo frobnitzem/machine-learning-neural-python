@@ -1,5 +1,9 @@
 # Introduction to artificial neural networks in Python
 
+This repository is a fork from <https://github.com/carpentries-incubator/machine-learning-neural-python>, an excellent introduction to ML for images.
+
+---
+
 This half-day lesson gives an introduction to artificial neural networks. During the lesson we prepare and visualise data for algorithm development, and construct a neural network that is able to classify disease in X-rays.
 
 It is the third lesson in the machine learning curriculum. In the final lesson we explore the important area of responsible machine learning.

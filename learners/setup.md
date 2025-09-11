@@ -3,66 +3,24 @@ title: Setup
 ---
 ## Software Setup
 
-This lesson is designed to be run on a personal computer.
 All of the software and data used in this lesson are freely available online,
 and instructions on how to obtain them are provided below.
 
 ## Install Python
-In this lesson, we will be using Python 3 with some of its most popular scientific libraries.
-Although one can install a plain-vanilla Python and all required libraries by hand, we recommend installing [Anaconda][anaconda-website],
-a Python distribution that comes with everything we need for the lesson.
-Detailed installation instructions for various operating systems can be found
-on The Carpentries [template website for workshops][anaconda-instructions]
-and in [Anaconda documentation][anaconda-install].
 
-## Obtain lesson materials
-
-The data that we are going to use for this project consists of 700 chest X-rays. These X-rays are a subset of the public NIH ChestX-ray dataset.
-
-> Xiaosong Wang, Yifan Peng, Le Lu, Zhiyong Lu, Mohammadhadi Bagheri, Ronald Summers, ChestX-ray8: Hospital-scale Chest X-ray Database and Benchmarks on Weakly-Supervised Classification and Localization of Common Thorax Diseases, IEEE CVPR, pp. 3462-3471, 2017
-
-1. Download [chest\_xrays.zip](https://github.com/carpentries-incubator/machine-learning-neural-python/raw/refs/heads/main/episodes/data/chest_xrays.zip).
-2. Create a folder called `carpentries-ml-neural` on your Desktop.
-3. Move downloaded files to `carpentries-ml-neural`.
-
-## Launch Python interface
-
-To start working with Python, we need to launch a program that will interpret and execute our Python commands. Below we list several options. If you don't have a preference, proceed with the top option in the list that is available on your machine. Otherwise, you may use any interface
-you like.
-
-## Option A: Jupyter Notebook
-
-A Jupyter Notebook provides a browser-based interface for working with Python.
-If you installed Anaconda, you can launch a notebook in two ways:
-
-:::  spoiler
-
-## Anaconda Navigator
-
-1. Launch Anaconda Navigator.
-  It might ask you if you'd like to send anonymized usage information to Anaconda developers:
-  ![Anaconda Navigator first launch](fig/anaconda-navigator-first-launch.png){width='100%'}
-  Make your choice and click "Ok, and don't show again" button.
-2. Find the "Notebook" tab and click on the "Launch" button:
-  ![Anaconda Navigator Notebook launch](fig/anaconda-navigator-notebook-launch.png)
-  Anaconda will open a new browser window or tab with a Notebook Dashboard showing you the
-  contents of your Home (or User) folder.
-3. Navigate to the `data` directory by clicking on the directory names leading to it:
-  `Desktop`, `swc-python`, then `data`:
-  ![Anaconda Navigator Notebook directory](fig/jupyter-notebook-data-directory.png)
-4. Launch the notebook by clicking on the "New" button and then selecting "Python 3":
-  ![Anaconda Navigator Notebook directory](fig/jupyter-notebook-launch-notebook.png)
-  
-
-:::
-
-:::  spoiler
-
-## Command line (Terminal)
-
-1\. Navigate to the `data` directory:
+In this lesson, we will be using Python 3 with some of its most
+popular scientific libraries.
+The simplest way to install Python is probably to install
+the uv package manager following the instructions from ORNL-training's
+lesson on [Python with uv](https://ornl-training.github.io/python-with-uv/index.html#installing-uv).
 
 
+## Open a Terminal and Create a Project Directory
+
+We will keep track of all our source code and data files in
+a single "project" directory, `Desktop/src/ml-xray`.
+In order to run shell commands from that directory we first
+have to open a shell and navigate there.
 
 ::::::::::::::  spoiler
 
@@ -72,7 +30,11 @@ If you're using a Unix shell application, such as Terminal app in macOS, Console
 in Linux, or [Git Bash][gitbash] on Windows, execute the following command:
 
 ```bash
-cd ~/Desktop/swc-python/data
+cd ~/Desktop
+mkdir src
+cd src
+uv init ml-xray
+cd ~/Desktop/src/ml-xray
 ```
 
 :::::::::::::::::::::::::
@@ -83,23 +45,90 @@ cd ~/Desktop/swc-python/data
 
 On Windows, you can use its native Command Prompt program.  The easiest way to start it up is
 pressing <kbd>Windows Logo Key</kbd>\+<kbd>R</kbd>, entering `cmd`, and hitting
-<kbd>Return</kbd>. In the Command Prompt, use the following command to navigate to
-the `data` folder:
+<kbd>Return</kbd>. In the Command Prompt, use the following commands to
+create your project:
 
 ```source
-cd /D %userprofile%\Desktop\swc-python\data
+cd /D %userprofile%\Desktop
+mkdir src
+cd src
+uv init ml-xray
+cd /D %userprofile%\Desktop\src\ml-xray
 ```
 
 :::::::::::::::::::::::::
 
-2\. Start Jupyter server
+## Download Project Package Dependencies
+
+The major strength of Python is the number of libraries available.
+These provide functionality like loading and manipulating images,
+organizing and visualizing tables of data, building and training
+AI/ML models etc.  This lesson is built on several Python libraries.
+
+We can install them up-front using the following commands:
+
+```bash
+uv add opencv-python
+uv add matplotlib
+uv add numpy
+uv add keras
+uv add notebook # for using jupyter (recommended)
+```
+
+The [Python Package Index](https://pypi.org) hosts most python packages.
+Any developer can add packages there, so it is very important to
+read through and understand the package's origin, contribution history,
+and developers.
+
+Packages do not always have the same name as the
+corresponding `import` source code line (e.g. `import cv2` for opencv-python).
+Digging through available packages like this requires effort,
+but not as much effort as writing the package yourself.
+Often, the package's documentation is the deciding factor for how
+successful and useful it will be.
+
+When you want to progress beyond this lesson, the package
+documentation and the wider set of materials written about
+using these packages are the place to go.
+
+## Obtain lesson materials
+
+The data that we are going to use for this project consists of 700 chest X-rays. These X-rays are a subset of the public NIH ChestX-ray dataset.
+
+> Xiaosong Wang, Yifan Peng, Le Lu, Zhiyong Lu, Mohammadhadi Bagheri, Ronald Summers, ChestX-ray8: Hospital-scale Chest X-ray Database and Benchmarks on Weakly-Supervised Classification and Localization of Common Thorax Diseases, IEEE CVPR, pp. 3462-3471, 2017
+
+1. Download [chest\_xrays.zip](https://github.com/carpentries-incubator/machine-learning-neural-python/raw/refs/heads/main/episodes/data/chest_xrays.zip).
+2. Unzip the downloaded files to `Desktop/src/ml-xray`.
+
+After unzipping, a new folder (`chest-xrays`) should be present
+in the project directory.  It has two sub-folders, each full of
+png images.
+
+
+## Opening a Jupyter Notebook
+
+A Jupyter Notebook provides a browser-based interface for working with Python.
+We will use notebooks in this tutorial, but it is possible for
+an expert to avoid notebooks by typing code directly into
+any editor (e.g. `vim main.py`) and running (`uv run main.py`).
+
+The advantage of editing `main.py` is that you will tend to structure
+your code into functions.  Ideally, functions accomplish small units
+of work and have only a few variables defined.
+Jupyter notebooks are good for exploring ideas, but easily become
+a confusing jumble of variables (holding lots of data).
+Best practice is actually to mix notebooks with python modules
+(e.g. `helpers.py`, `ml-model.py`, etc.).  That way, you can
+write re-usable functions in your `py` files and `import helpers`
+from your Jupyter notebook.
+
 
 ::::::::::::  spoiler
 
 ## Unix shell
 
 ```bash
-jupyter notebook
+uv run jupyter notebook
 ```
 
 :::::::::::::::::::::::::
@@ -109,30 +138,13 @@ jupyter notebook
 ## Command Prompt (Windows)
 
 ```source
-python -m notebook
+uv run python -m notebook
 ```
 :::::::::::::::::::::::::
 
-
-3\. Launch the notebook by clicking on the "New" button on the right and selecting "Python 3"
-from the drop-down menu:
+Launch the notebook by clicking on the "New" button on the right
+and selecting "Python 3" from the drop-down menu:
 ![Anaconda Navigator Notebook directory](fig/jupyter-notebook-launch-notebook2.png)
 
 
-:::
-
-
-## Option B: Cloud Notebook
-
-Colaboratory, or "Colab", is a cloud service that allows you to run a Jupyter-like Notebook in a web browser. To open a notebook, visit the [Colaboratory website][google-colab]. You can upload your datasets using the "Files" panel on the left side of the page.
-
-![](fig/colab_files.png){alt='Google Colab'}
-
-[anaconda-website]: https://www.anaconda.com/
-[anaconda-instructions]: https://carpentries.github.io/workshop-template/#python
-[anaconda-install]: https://docs.anaconda.com/anaconda/install
 [gitbash]: https://gitforwindows.org
-[google-colab]: https://colab.research.google.com/
-
-
-
