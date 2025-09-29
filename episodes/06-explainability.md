@@ -30,7 +30,7 @@ If a model is making a prediction, many of us would like to know how the decisio
 Saliency maps use color to illustrate the extent to which a region of an image contributes to a given decision. Let's plot some saliency maps for our model:
 
 ```python
-# !pip install tf_keras_vis
+# !uv add tf_keras_vis
 from matplotlib import cm
 from tf_keras_vis.gradcam import Gradcam
 
@@ -74,7 +74,7 @@ for image_id in range(10):
     
     # Display the class
     _class = 'normal' if labels_test[image_id] == 0 else 'effusion'
-    _prediction = best_model.predict(dataset_test[image_id][np.newaxis, :, ...], verbose=0)
+    _prediction = best_model.predict(dataset_test[image_id:image_id+1], verbose=0)
     
     plot_map(cam, _class, _prediction[0][0], SEED_INPUT)
 ```
