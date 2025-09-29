@@ -64,6 +64,37 @@ print(f"Test: {dataset_test.shape}, {labels_test.shape}")
 ```
 
 ```output
+---------------------------------------------------------------------------
+ModuleNotFoundError                       Traceback (most recent call last)
+Cell In[22], line 1
+----> 1 from from sklearn.model_selection import train_test_split
+
+ModuleNotFoundError: No module named 'sklearn'
+```
+
+The error indicates there is a missing module (python package or file).
+
+:::::::::::::::::::::::::::::::::::::::  challenge
+
+## Exercise
+
+Find and install the missing module.
+
+:::::::::::::::  solution
+
+## Solution
+
+```
+!uv add scikit-learn
+```
+
+:::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::::::::
+
+Now re-running the failing step should succeed.
+
+```output
 No. images, x_dim, y_dim, colors) (No. labels, 1)
 
 Train: (505, 256, 256, 1), (505, 1)
@@ -96,7 +127,7 @@ datagen = ImageDataGenerator(
 
 ## Exercise
 
-A) Modify the `ImageDataGenerator` to include one or more of the following:
+A) Read through the documentation for tensorflow's image data generator.  Modify the `ImageDataGenerator` to include one or more of the following:
 
 - `rotation_range=20`
 - `zoom_range=0.2`
@@ -106,7 +137,7 @@ A) Modify the `ImageDataGenerator` to include one or more of the following:
 
 ## Solution
 
-A) Here's an example:
+A) The documentation is [here](https://www.tensorflow.org/api_docs/python/tf/keras/preprocessing/image/ImageDataGenerator).
 
 ```python
 datagen = ImageDataGenerator(

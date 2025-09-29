@@ -49,6 +49,63 @@ plot_example(random.choice(effusion_list), "Effusion", 1)
 
 ![](fig/example_records.png){alt='Example X-rays' width="600px"}
 
+:::::::::::::::::::::::::::::::::::::::  challenge
+
+## Exercise
+
+Use the python pillow library to load and visualize the images
+in place of cv2.
+
+- Find an import/load/plot image recipe from the documentation.
+- Adapt it to load our image set.
+- What are some advantages/disadvantages of cv2 vs. pillow?
+
+:::::::::::::::  solution
+
+## Solution
+
+* [pypi package](https://pypi.org/project/pillow/)
+
+  - Note the stars/forks/issues/PR-s shows an active developer community. 
+  - Note the build and test status increase confidence the software performs as intended. 
+  - OpenSSF best practices badge indicates the developers value strong development process. 
+
+* [documentation for PIL.Image.open](https://pillow.readthedocs.io/en/latest/reference/Image.html#functions)
+
+  - takes only a path, returns an Image 
+
+* [documentation for grayscale](https://pillow.readthedocs.io/en/latest/reference/ImageOps.html#PIL.ImageOps.grayscale)
+
+  - transforms an Image to another Image (now in grayscale) 
+
+* [documentation for numpy](https://pillow.readthedocs.io/en/latest/reference/Image.html#PIL.Image.fromarray)
+
+  - a `method` of Image, this creates an image from a numpy array (wrong direction) 
+  - just below, it notes one can use `np.asarray(im)` 
+
+
+```python
+from PIL import Image, ImageOps
+import numpy as np
+
+fig, ax = plt.subplots(1, 2)
+fig.set_size_inches(10, 10)
+im = Image.open(random.choice(normal_list))
+im = ImageOps.grayscale(im) # optional
+im = np.asarray(im)
+ax[0].imshow(im)
+ax[0].set_title("Class: Normal")
+im = Image.open(random.choice(effusion_list))
+im = ImageOps.grayscale(im) # optional
+im = np.asarray(im)
+ax[1].imshow(im)
+ax[1].set_title("Class: Effusion")
+```
+
+:::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::::::::
+
 ## Can we detect effusion?
 
 Run the following code to flip a coin to select an x-ray from our collection.
