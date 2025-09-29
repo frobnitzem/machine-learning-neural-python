@@ -327,7 +327,7 @@
       </div>
       <hr></nav><main id="main-content" class="main-content"><div class="container lesson-content">
         <h1>Explainability</h1>
-        <p>Last updated on 2025-09-11 |
+        <p>Last updated on 2025-09-29 |
 
         <a href="https://github.com/carpentries-incubator/machine-learning-neural-python/edit/main/episodes/06-explainability.md" class="external-link">Edit this page <i aria-hidden="true" data-feather="edit"></i></a></p>
 
@@ -381,7 +381,7 @@ for our model:</p>
 <div class="codewrapper sourceCode" id="cb1">
 <h3 class="code-label">PYTHON<i aria-hidden="true" data-feather="chevron-left"></i><i aria-hidden="true" data-feather="chevron-right"></i>
 </h3>
-<pre class="sourceCode python" tabindex="0"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># !pip install tf_keras_vis</span></span>
+<pre class="sourceCode python" tabindex="0"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># !uv add tf_keras_vis</span></span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="im">from</span> matplotlib <span class="im">import</span> cm</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="im">from</span> tf_keras_vis.gradcam <span class="im">import</span> Gradcam</span>
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
@@ -425,7 +425,7 @@ for our model:</p>
 <span id="cb1-42"><a href="#cb1-42" tabindex="-1"></a>    </span>
 <span id="cb1-43"><a href="#cb1-43" tabindex="-1"></a>    <span class="co"># Display the class</span></span>
 <span id="cb1-44"><a href="#cb1-44" tabindex="-1"></a>    _class <span class="op">=</span> <span class="st">'normal'</span> <span class="cf">if</span> labels_test[image_id] <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> <span class="st">'effusion'</span></span>
-<span id="cb1-45"><a href="#cb1-45" tabindex="-1"></a>    _prediction <span class="op">=</span> best_model.predict(dataset_test[image_id][np.newaxis, :, ...], verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb1-45"><a href="#cb1-45" tabindex="-1"></a>    _prediction <span class="op">=</span> best_model.predict(dataset_test[image_id:image_id<span class="op">+</span><span class="dv">1</span>], verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb1-46"><a href="#cb1-46" tabindex="-1"></a>    </span>
 <span id="cb1-47"><a href="#cb1-47" tabindex="-1"></a>    plot_map(cam, _class, _prediction[<span class="dv">0</span>][<span class="dv">0</span>], SEED_INPUT)</span></code></pre>
 </div>
@@ -616,8 +616,8 @@ validated carefully.</li>
   "url": "https://carpentries-incubator.github.io/machine-learning-neural-python/instructor/06-explainability.html",
   "identifier": "https://carpentries-incubator.github.io/machine-learning-neural-python/instructor/06-explainability.html",
   "dateCreated": "2021-10-25",
-  "dateModified": "2025-09-11",
-  "datePublished": "2025-09-23"
+  "dateModified": "2025-09-29",
+  "datePublished": "2025-09-29"
 }
 
   </script><script>
