@@ -68,10 +68,10 @@ AI/ML models etc.  This lesson is built on several Python libraries.
 We can install them up-front using the following commands:
 
 ```bash
-uv add opencv-python
+uv add pillow
 uv add matplotlib
 uv add numpy
-uv add keras
+uv add torch torchvision
 uv add notebook # for using jupyter (recommended)
 ```
 
@@ -81,7 +81,7 @@ read through and understand the package's origin, contribution history,
 and developers.
 
 Packages do not always have the same name as the
-corresponding `import` source code line (e.g. `import cv2` for opencv-python).
+corresponding `import` source code line (e.g. `import PIL` for pillow).
 Digging through available packages like this requires effort,
 but not as much effort as writing the package yourself.
 Often, the package's documentation is the deciding factor for how

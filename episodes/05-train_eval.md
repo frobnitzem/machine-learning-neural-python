@@ -29,11 +29,11 @@ Now that we've defined the architecture of our neural network, the next step is 
 
 ### What does "compiling" a model mean?
 
-Compiling sets up the model for training by specifying:
+In PyTorch, we don't "compile" a model in the same way as Keras. Instead, we explicitly define:
 
 - A loss function, which measures the difference between the model’s predictions and the actual labels.
 - An optimizer, such as gradient descent, which adjusts the model's internal weights to minimize the loss.
-- One or more metrics, such as accuracy, to evaluate performance during training.
+- Metrics, such as accuracy, which we calculate manually during the training loop.
 
 ### What happens during training?
 
@@ -55,34 +55,77 @@ Choosing these parameters is a tradeoff between speed, memory usage, and perform
 
 ```python
 import time
-from tensorflow.keras import optimizers
-from tensorflow.keras.callbacks import ModelCheckpoint
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
 
-# Define the network optimization method. 
-# Adam is a popular gradient descent algorithm
-# with adaptive, per-parameter learning rates.
-custom_adam = optimizers.Adam()
+# Define the loss function and optimizer
+# BCEWithLogitsLoss is used for binary classification
+criterion = nn.BCELoss() 
+optimizer = optim.Adam(model.parameters())
 
-# Compile the model defining the 'loss' function type, optimization and the metric.
-model.compile(loss='binary_crossentropy', optimizer=custom_adam, metrics=['acc'])
+# Prepare data loaders
+train_ds = TensorDataset(torch.tensor(dataset_train, dtype=torch.float32), torch.tensor(labels_train, dtype=torch.float32))
+val_ds = TensorDataset(torch.tensor(dataset_val, dtype=torch.float32), torch.tensor(labels_val, dtype=torch.float32))
 
-# Save the best model found during training
-checkpointer = ModelCheckpoint(filepath='best_model.keras', monitor='val_loss',
-                               verbose=1, save_best_only=True)
+train_loader = DataLoader(train_ds, batch_size=16, shuffle=True)
+val_loader = DataLoader(val_ds, batch_size=16)
 
 # Training parameters
-batch_size = 16
-epochs=10
+epochs = 10
+best_val_loss = float('inf')
 
 # Start the timer
 start_time = time.time()
 
-# Now train our network!
-# steps_per_epoch = len(dataset_train)//batch_size
-hist = model.fit(datagen.flow(dataset_train, labels_train, batch_size=batch_size),
-                 epochs=epochs, 
-                 validation_data=(dataset_val, labels_val), 
-                 callbacks=[checkpointer])
+# Training loop
+train_losses, val_losses = [], []
+train_accs, val_accs = [], []
+
+for epoch in range(epochs):
+    model.train()
+    running_loss, correct, total = 0.0, 0, 0
+    
+    for inputs, labels in train_loader:
+        optimizer.zero_grad()
+        outputs = model(inputs).squeeze()
+        loss = criterion(outputs, labels.squeeze())
+        loss.backward()
+        optimizer.step()
+        
+        running_loss += loss.item()
+        predicted = (outputs > 0.5).float()
+        correct += (predicted == labels.squeeze()).sum().item()
+        total += labels.size(0)
+    
+    epoch_loss = running_loss / len(train_loader)
+    epoch_acc = correct / total
+    train_losses.append(epoch_loss)
+    train_accs.append(epoch_acc)
+    
+    # Validation
+    model.eval()
+    val_running_loss, val_correct, val_total = 0.0, 0, 0
+    with torch.no_grad():
+        for inputs, labels in val_loader:
+            outputs = model(inputs).squeeze()
+            loss = criterion(outputs, labels.squeeze())
+            val_running_loss += loss.item()
+            predicted = (outputs > 0.5).float()
+            val_correct += (predicted == labels.squeeze()).sum().item()
+            val_total += labels.size(0)
+            
+    val_loss = val_running_loss / len(val_loader)
+    val_acc = val_correct / val_total
+    val_losses.append(val_loss)
+    val_accs.append(val_acc)
+    
+    if val_loss << best best_val_loss:
+        best_val_loss = val_loss
+        torch.save(model.state_dict(), 'best_model.pt')
+        
+    print(f"Epoch {epoch+1}/{epochs} - loss: {epoch_loss:.3f} - acc: {epoch_acc:.3f} - val_loss: {val_loss:.3f} - val_acc: {val_acc:.3f}")
 
 # End the timer
 end_time = time.time()
@@ -93,15 +136,15 @@ print(f"Training completed in {elapsed_time:.2f} seconds.")
 We can now plot the results of the training. "Loss" should drop over successive epochs and accuracy should increase.
 
 ```python
-plt.plot(hist.history['loss'], 'b-', label='train loss')
-plt.plot(hist.history['val_loss'], 'r-', label='val loss')
+plt.plot(train_losses, 'b-', label='train loss')
+plt.plot(val_losses, 'r-', label='val loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
 plt.legend(loc='lower right')
 plt.show()
 
-plt.plot(hist.history['acc'], 'b-', label='train accuracy')
-plt.plot(hist.history['val_acc'], 'r-', label='val accuracy')
+plt.plot(train_accs, 'b-', label='train accuracy')
+plt.plot(val_accs, 'r-', label='val accuracy')
 plt.ylabel('Accuracy')
 plt.xlabel('Epoch')
 plt.legend(loc='lower right')
@@ -140,7 +183,7 @@ C) Increasing dropout may lower performance slightly but improve generalization.
 
 ## Batch normalization
 
-[Batch normalization](https://keras.io/api/layers/normalization_layers/batch_normalization/) is a technique that standardizes the output of a layer across each training batch. This helps stabilize and speed up training.
+[Batch normalization](https://docs.pytorch.org/docs/2.12/generated/torch.nn.BatchNorm2d.html) is a technique that standardizes the output of a layer across each training batch. This helps stabilize and speed up training.
 
 It works by:
 
@@ -151,9 +194,9 @@ It works by:
 You typically insert `BatchNormalization()` after a convolutional or dense layer, and before the activation function:
 
 ```python
-x = Conv2D(32, kernel_size=3, padding='same')(x)
-x = BatchNormalization()(x)
-x = Activation('relu')(x)
+x = nn.Conv2d(32, 3, padding=1)(x)
+x = nn.BatchNorm2d(32)(x)
+x = nn.ReLU()(x)
 ```
 
 Benefits can include:
@@ -177,15 +220,16 @@ What changes do you notice?
 A) Adding batch normalization can improve training stability and accuracy. Find this line in your model:
 
 ```python
-x = Conv2D(filters=8, kernel_size=3, padding='same', activation='relu')(inputs)
+x = nn.Conv2d(1, 8, kernel_size=3, padding=1)(inputs)
+x = nn.ReLU()(x)
 ```
 
 Split it into two lines, and insert `BatchNormalization()` before the activation:
 
 ```python
-x = Conv2D(filters=8, kernel_size=3, padding='same')(inputs)
-x = BatchNormalization()(x)
-x = Activation('relu')(x)
+x = nn.Conv2d(1, 8, kernel_size=3, padding=1)(inputs)
+x = nn.BatchNorm2d(8)(x)
+x = nn.ReLU()(x)
 ```
 
 You may notice:
@@ -222,7 +266,7 @@ To improve performance in a structured way, try:
 
 - Manual tuning: Change one variable at a time (e.g., number of filters, dropout rate) and observe its effect on validation performance.
 - Grid search: Define a grid of parameters (e.g., filter sizes, learning rates, dropout values) and test all combinations. This is slow but thorough.
-- Automated tuning: Use tools like [Keras Tuner](https://keras.io/keras_tuner/) to automate the search for the best architecture.
+- Automated tuning: Use tools like [Optuna](https://optuna.org) to automate the search for the best architecture.
 
 ### Evaluate and iterate
 
@@ -245,18 +289,30 @@ To reduce overfitting, consider:
 In this step, we present the unseen test dataset to our trained network and evaluate the performance.
 
 ```python
-from tensorflow.keras.models import load_model 
-
-# Open the best model saved during training
-best_model = load_model('best_model.keras')
+# Load the best model saved during training
+model = ChestXRayNet()
+model.load_state_dict(torch.load('best_model.pt'))
+model.eval()
 print('\nNeural network weights updated to the best epoch.')
 ```
 
 Now that we've loaded the best model, we can evaluate the accuracy on our test data.
 
 ```python
-# We use the evaluate function to evaluate the accuracy of our model in the test group
-print(f"Accuracy in test group: {best_model.evaluate(dataset_test, labels_test, verbose=0)[1]}")
+# Evaluate the accuracy on our test data
+model.eval()
+with torch.no_grad():
+    test_ds = TensorDataset(torch.tensor(dataset_test, dtype=torch.float32), torch.tensor(labels_test, dtype=torch.float32))
+    test_loader = DataLoader(test_ds, batch_size=16)
+    
+    correct, total = 0, 0
+    for inputs, labels in test_loader:
+        outputs = model(inputs).squeeze()
+        predicted = (outputs > 0.5).float()
+        correct += (predicted == labels.squeeze()).sum().item()
+        total += labels.size(0)
+
+print(f"Accuracy in test group: {correct / total:.2f}")
 ```
 
 ```output

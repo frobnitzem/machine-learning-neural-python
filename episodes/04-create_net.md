@@ -9,7 +9,7 @@ exercises: 20
 - Understand the structure and components of a neural network.
 - Identify the purpose of activation functions and dense layers.
 - Explain how convolutional layers extract features from images.
-- Construct a convolutional neural network using TensorFlow and Keras.
+- Construct a convolutional neural network using PyTorch.
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -96,7 +96,7 @@ Each value in the output is the maximum from a 2×2 window in the input.
 - **Adds translation tolerance** — the model is less sensitive to small shifts in the image
 - **Keeps the strongest features** while discarding low-importance details
 
-In TensorFlow, max pooling is implemented with the `MaxPool2D()` layer. You'll see it applied multiple times in our network to gradually reduce the size of the feature maps and focus on the most prominent features.
+In PyTorch, max pooling is implemented with the `nn.MaxPool2d()` layer. You'll see it applied multiple times in our network to gradually reduce the size of the feature maps and focus on the most prominent features.
 
 ## Dropout
 
@@ -112,11 +112,11 @@ In practice:
 For example:
 
 ```python
-from tensorflow.keras.layers import Dropout
+from torch import nn
 
-x = Dense(128, activation='relu')(x)
+x = nn.Linear(128) # Example dense layer
 # Drop 50% of neurons during training
-x = Dropout(0.5)(x)
+x = nn.Dropout(0.5)(x)
 ```
 
 The value 0.5 is the dropout rate — the fraction of neurons to disable.
@@ -148,70 +148,75 @@ This architecture is loosely inspired by classic CNNs such as LeNet-5 and VGGNet
 
 More complex architectures (like DenseNet) are used in real-world medical imaging applications. But for a small dataset and classroom setting, our custom architecture is ideal for learning.
 
-To make this process modular and reusable, we’ll write a function called `build_model()` using TensorFlow and Keras.
+To make this process modular and reusable, we’ll write a class called `ChestXRayNet` using PyTorch.
 
 ```python
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import (
-    Activation, BatchNormalization, Conv2D, Dense,
-    Dropout, GlobalAveragePooling2D, Input, MaxPool2D
-)
+import torch
+from torch import nn
 
-def build_model(input_shape=(256, 256, 1), dropout_rate=0.6):
-    """
-    Build and return a convolutional neural network with explanatory comments.
+class ChestXRayNet(nn.Module):
+    def __init__(self, dropout_rate=0.6):
+        super(ChestXRayNet, self).__init__()
+        
+        # First convolutional block: 8 filters (3x3), followed by max pooling
+        self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)
+        self.pool1 = nn.MaxPool2d(2)
+        
+        # Second convolutional block
+        self.conv2 = nn.Conv2d(8, 8, kernel_size=3, padding=1)
+        self.pool2 = nn.MaxPool2d(2)
+        
+        # Third and fourth blocks: 12 filters
+        self.conv3 = nn.Conv2d(8, 12, kernel_size=3, padding=1)
+        self.pool3 = nn.MaxPool2d(2)
+        self.conv4 = nn.Conv2d(12, 12, kernel_size=3, padding=1)
+        self.pool4 = nn.MaxPool2d(2)
+        
+        # Fifth and sixth blocks: 20 filters, 5x5 kernel
+        self.conv5 = nn.Conv2d(12, 20, kernel_size=5, padding=2)
+        self.pool5 = nn.MaxPool2d(2)
+        self.conv6 = nn.Conv2d(20, 20, kernel_size=5, padding=2)
+        self.pool6 = nn.MaxPool2d(2)
+        
+        # Final convolutional layer with 50 filters
+        self.conv7 = nn.Conv2d(20, 50, kernel_size=5, padding=2)
+        
+        # Global average pooling reduces each feature map to a single value
+        self.gap = nn.AdaptiveAvgPool2d(1)
+        
+        # Dense (fully connected) layers for classification
+        self.fc1 = nn.Linear(50, 128)
+        self.dropout = nn.Dropout(dropout_rate)
+        self.fc2 = nn.Linear(128, 32)
+        self.fc3 = nn.Linear(32, 1)
+        
+        self.relu = nn.ReLU()
+        self.sigmoid = nn.Sigmoid()
 
-    Args:
-        input_shape (tuple): Shape of the input images (H, W, Channels).
-        dropout_rate (float): Dropout rate to use before final dense layers.
+    def forward(self, x):
+        # Conv blocks
+        x = self.pool1(self.relu(self.conv1(x)))
+        x = self.pool2(self.relu(self.conv2(x)))
+        x = self.pool3(self.relu(self.conv3(x)))
+        x = self.pool4(self.relu(self.conv4(x)))
+        x = self.pool5(self.relu(self.conv5(x)))
+        x = self.pool6(self.relu(self.conv6(x)))
+        
+        # Final conv and GAP
+        x = self.relu(self.conv7(x))
+        x = self.gap(x)
+        x = torch.flatten(x, 1)
+        
+        # Dense layers
+        x = self.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.relu(self.fc2(x))
+        x = self.sigmoid(self.fc3(x))
+        
+        return x
 
-    Returns:
-        model (tf.keras.Model): Compiled Keras model.
-    """
-    # Define the input layer matching the shape of the images.
-    inputs = Input(shape=input_shape)
-
-    # First convolutional layer: applies 8 filters (3x3), followed by max pooling
-    # Padding='same' keeps the output size the same as the input.
-    x = Conv2D(filters=8, kernel_size=3, padding='same', activation='relu')(inputs)
-    x = MaxPool2D()(x)
-
-    # Add a second convolutional layer + pooling
-    x = Conv2D(filters=8, kernel_size=3, padding='same', activation='relu')(x)
-    x = MaxPool2D()(x)
-
-    # Add two more convolutional layers with 12 filters, extracting more complex features
-    x = Conv2D(filters=12, kernel_size=3, padding='same', activation='relu')(x)
-    x = MaxPool2D()(x)
-    x = Conv2D(filters=12, kernel_size=3, padding='same', activation='relu')(x)
-    x = MaxPool2D()(x)
-
-    # Increase the filter size and depth (20 filters, 5x5 kernel)
-    x = Conv2D(filters=20, kernel_size=5, padding='same', activation='relu')(x)
-    x = MaxPool2D()(x)
-    x = Conv2D(filters=20, kernel_size=5, padding='same', activation='relu')(x)
-    x = MaxPool2D()(x)
-
-    # Final convolutional layer with 50 filters
-    x = Conv2D(filters=50, kernel_size=5, padding='same', activation='relu')(x)
-
-    # Global average pooling reduces each feature map to a single value
-    x = GlobalAveragePooling2D()(x)
-
-    # Dense (fully connected) layer with 128 neurons for classification
-    # Dropout applied to the 128 activations from the Dense layer
-    x = Dense(128, activation='relu')(x)
-    x = Dropout(dropout_rate)(x)
-
-    # Another dense layer with 32 neurons
-    x = Dense(32, activation='relu')(x)
-
-    # Final output layer: a single neuron with sigmoid activation (for binary classification)
-    outputs = Dense(1, activation='sigmoid')(x)
-
-    # Build the model
-    model = Model(inputs=inputs, outputs=outputs)
-    return model
+# Create the model
+model = ChestXRayNet(dropout_rate=0.6)
 ```
 
 :::::::::::::::::::::::::::::::::::::::  challenge
@@ -236,73 +241,41 @@ B) Skipping pooling layers means the model retains high-resolution spatial infor
 Now let's build the model and view its architecture:
 
 ```python
-from tensorflow.random import set_seed
+import torch
 
 # Set the seed for reproducibility
-set_seed(42)
+torch.manual_seed(42)
 
-# Call the build_model function to create the model
-model = build_model(input_shape=(256, 256, 1), dropout_rate=0.6)
+# Create the model
+model = ChestXRayNet(dropout_rate=0.6)
 
 # View the model architecture
-model.summary()
+print(model)
 ```
 
 ```output
-Model: "model_39"
-_________________________________________________________________
- Layer (type)                Output Shape              Param #   
-=================================================================
- input_9 (InputLayer)        [(None, 256, 256, 1)]     0         
-                                                                 
- conv2d_59 (Conv2D)          (None, 256, 256, 8)       80        
-                                                                 
- max_pooling2d_50 (MaxPoolin  (None, 128, 128, 8)      0         
- g2D)                                                            
-                                                                 
- conv2d_60 (Conv2D)          (None, 128, 128, 8)       584       
-                                                                 
- max_pooling2d_51 (MaxPoolin  (None, 64, 64, 8)        0         
- g2D)                                                            
-                                                                 
- conv2d_61 (Conv2D)          (None, 64, 64, 12)        876       
-                                                                 
- max_pooling2d_52 (MaxPoolin  (None, 32, 32, 12)       0         
- g2D)                                                            
-                                                                 
- conv2d_62 (Conv2D)          (None, 32, 32, 12)        1308      
-                                                                 
- max_pooling2d_53 (MaxPoolin  (None, 16, 16, 12)       0         
- g2D)                                                            
-                                                                 
- conv2d_63 (Conv2D)          (None, 16, 16, 20)        6020      
-                                                                 
- max_pooling2d_54 (MaxPoolin  (None, 8, 8, 20)         0         
- g2D)                                                            
-                                                                 
- conv2d_64 (Conv2D)          (None, 8, 8, 20)          10020     
-                                                                 
- max_pooling2d_55 (MaxPoolin  (None, 4, 4, 20)         0         
- g2D)                                                            
-                                                                 
- conv2d_65 (Conv2D)          (None, 4, 4, 50)          25050     
-                                                                 
- global_average_pooling2d_8   (None, 50)               0         
- (GlobalAveragePooling2D)                                        
-                                                                 
- dense_26 (Dense)            (None, 128)               6528      
-                                                                 
- dropout_8 (Dropout)         (None, 128)               0         
-                                                                 
- dense_27 (Dense)            (None, 32)                4128      
-                                                                 
- dense_28 (Dense)            (None, 1)                 33        
-                                                                 
-=================================================================
-Total params: 54,627
-Trainable params: 54,627
-Non-trainable params: 0
-_________________________________________________________________
+ChestXRayNet(
+  (conv1): Conv2d(1, 8, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (pool1): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv2): Conv2d(8, 8, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (pool2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv3): Conv2d(8, 12, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (pool3): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv4): Conv2d(12, 12, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+  (pool4): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv5): Conv2d(12, 20, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
+  (pool5): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv6): Conv2d(20, 20, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
+  (pool6): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+  (conv7): Conv2d(20, 50, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
+  (gap): AdaptiveAvgPool2d(output_size=1)
+  (fc1): Linear(in_features=50, out_features=128, bias=True)
+  (dropout): Dropout(p=0.6, inplace=False)
+  (fc2): Linear(in_features=128, out_features=32, bias=True)
+  (fc3): Linear(in_features=32, out_features=1, bias=True)
+  (relu): ReLU()
+  (sigmoid): Sigmoid()
+)
 ```
 
 :::::::::::::::::::::::::::::::::::::::  challenge
@@ -318,16 +291,16 @@ Increase the number of filters in the first convolutional layer from 8 to 16.
 
 ## Solution
 
-In the `build_model()` function, locate this line:
+In the `ChestXRayNet` class, locate this line in `__init__`:
 
 ```python
-x = Conv2D(filters=8, kernel_size=3, padding='same', activation='relu')(inputs)
+self.conv1 = nn.Conv2d(1, 8, kernel_size=3, padding=1)
 ```
 
 Change it to:
 
 ```python
-x = Conv2D(filters=16, kernel_size=3, padding='same', activation='relu')(inputs)
+self.conv1 = nn.Conv2d(1, 16, kernel_size=3, padding=1)
 ```
 
 This increases the number of filters (feature detectors), and therefore increases the number of learnable parameters. The model may be able to capture more features, improving learning, but it also risks overfitting and will take longer to train.

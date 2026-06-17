@@ -26,14 +26,13 @@ exercises: 20
 In the previous section, we set up a dataset comprising 700 chest X-rays. Half of the X-rays are labelled "normal" and half are labelled as "pleural effusion". Let's take a look at some of the images.
 
 ```python
-# cv2 is openCV, a popular computer vision library
-import cv2
+from PIL import Image
 from matplotlib import pyplot as plt 
 import random
 
 def plot_example(example, label, loc):
-    image = cv2.imread(example)
-    im = ax[loc].imshow(image)
+    image = Image.open(example)
+    ax[loc].imshow(image, cmap='gray')
     title = f"Class: {label}\n{example}"
     ax[loc].set_title(title)
 
@@ -64,8 +63,8 @@ else:
     fn = random.choice(effusion_list)
 
 # plot the image
-image = cv2.imread(fn)
-plt.imshow(image)
+image = Image.open(fn)
+plt.imshow(image, cmap='gray')
 ```
 
 Show the answer:
@@ -107,7 +106,7 @@ import numpy as np
 
 file_idx = 56
 example = normal_list[file_idx]
-image = cv2.imread(example)
+image = np.array(Image.open(example))
 
 print(image.shape)
 ```
@@ -130,7 +129,7 @@ Most greyscale images are 8 bits per channel or 16 bits per channel.
 For a greyscale image with 8 bits per channel, each value in the matrix represents a tone between black (0) and white (255).
 
 ```python
-image = cv2.imread(example, cv2.IMREAD_GRAYSCALE)
+image = np.array(Image.open(example).convert('L'))
 print(image.shape)
 ```
 
@@ -160,11 +159,11 @@ In the next section, we'll be building and training a model. Let's prepare our d
 
 ```python
 # create a list of effusion images and labels
-dataset_effusion = [cv2.imread(fn, cv2.IMREAD_GRAYSCALE) for fn in effusion_list]
+dataset_effusion = [np.array(Image.open(fn).convert('L')) for fn in effusion_list]
 label_effusion = np.ones(len(dataset_effusion))
 
 # create a list of normal images and labels
-dataset_normal = [cv2.imread(fn, cv2.IMREAD_GRAYSCALE) for fn in normal_list]
+dataset_normal = [np.array(Image.open(fn).convert('L')) for fn in normal_list]
 label_normal = np.zeros(len(dataset_normal))
 
 # Combine the lists
@@ -184,7 +183,7 @@ For these reasons, we will downsample each image from 512×512 pixels to 256×25
 
 ```python
 # Downsample the images from (512,512) to (256,256)
-dataset = [cv2.resize(img, (256,256)) for img in dataset]
+dataset = [np.array(Image.fromarray(img).resize((256, 256))) for img in dataset]
 
 # Check the size of the reshaped images
 print(dataset[0].shape)
@@ -252,7 +251,7 @@ plt.imshow(dataset[idx], cmap='gray', vmin=min(vals), vmax=max(vals))
 
 :::::::::::::::::::::::::::::::::::::::: keypoints
 
-- X-ray images can be loaded and visualized using Python libraries like OpenCV and NumPy.
+- X-ray images can be loaded and visualized using Python libraries like Pillow and NumPy.
 - Images are stored as 2D arrays (grayscale) or 3D arrays (RGB).
 - Visual inspection helps us understand how disease features appear in imaging data.
 - Preprocessing steps like resizing and standardization prepare data for machine learning.

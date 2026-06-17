@@ -30,20 +30,15 @@ If a model is making a prediction, many of us would like to know how the decisio
 Saliency maps use color to illustrate the extent to which a region of an image contributes to a given decision. Let's plot some saliency maps for our model:
 
 ```python
-# !pip install tf_keras_vis
+# !pip install captum
 from matplotlib import cm
-from tf_keras_vis.gradcam import Gradcam
-
 import numpy as np
 from matplotlib import pyplot as plt
-from tf_keras_vis.gradcam_plus_plus import GradcamPlusPlus
-from tf_keras_vis.scorecam import Scorecam
-from tf_keras_vis.utils.scores import CategoricalScore
+from captum.attr import LayerGradCam
 
-# Select two differing explainability algorithms
-gradcam = GradcamPlusPlus(best_model, clone=True)
-scorecam = Scorecam(best_model, clone=True)
-
+# Select an explainability algorithm
+# We use LayerGradCam from the Captum library
+lgc = LayerGradCam(model, model.conv7)
 
 def plot_map(cam, classe, prediction, img):
     """
@@ -52,6 +47,8 @@ def plot_map(cam, classe, prediction, img):
     fig, axes = plt.subplots(1,2, figsize=(14, 5))
     axes[0].imshow(np.squeeze(img), cmap='gray')
     axes[1].imshow(np.squeeze(img), cmap='gray')
+    
+    # Normalize and convert to heatmap
     heatmap = np.uint8(cm.jet(cam[0])[..., :3] * 255)
     i = axes[1].imshow(heatmap, cmap="jet", alpha=0.5)
     fig.colorbar(i)
@@ -59,24 +56,20 @@ def plot_map(cam, classe, prediction, img):
 
 # Plot each image with accompanying saliency map
 for image_id in range(10):
-    SEED_INPUT = dataset_test[image_id]
-    CATEGORICAL_INDEX = [0]
-
-    layer_idx = 18
-    penultimate_layer_idx = 13
-    class_idx  = 0
-
-    cat_score = labels_test[image_id]
-    cat_score = CategoricalScore(CATEGORICAL_INDEX)
-    cam = gradcam(cat_score, SEED_INPUT, 
-                  penultimate_layer = penultimate_layer_idx,
-                  normalize_cam=True)
+    SEED_INPUT = torch.tensor(dataset_test[image_id], dtype=torch.float32).unsqueeze(0)
+    
+    # Generate attribution
+    # We target the output for the 'effusion' class (index 0 in binary)
+    cam = lgc.attribute(SEED_INPUT, target=0)
+    cam = cam.detach().cpu().numpy()
     
     # Display the class
     _class = 'normal' if labels_test[image_id] == 0 else 'effusion'
-    _prediction = best_model.predict(dataset_test[image_id][np.newaxis, :, ...], verbose=0)
+    model.eval()
+    with torch.no_grad():
+        _prediction = model(SEED_INPUT).item()
     
-    plot_map(cam, _class, _prediction[0][0], SEED_INPUT)
+    plot_map(cam, _class, _prediction, SEED_INPUT)
 ```
 
 ![](fig/saliency.png){alt='Saliency maps' width="600px"}
@@ -107,9 +100,15 @@ While saliency maps may offer us interesting insights about regions of an image 
 
 > Saliency methods have emerged as a popular tool to highlight features in an input deemed relevant for the prediction of a learned model. Several saliency methods have been proposed, often guided by visual appeal on image data. ... Through extensive experiments we show that some existing saliency methods are independent both of the model and of the data generating process. Consequently, methods that fail the proposed tests are inadequate for tasks that are sensitive to either data or model, such as, finding outliers in the data, explaining the relationship between inputs and outputs that the model learned, and debugging the model.
 
-There are multiple methods for producing saliency maps to explain how a particular model is making predictions. The method we have been using is called GradCam++, but how does this method compare to another? Use this code to compare GradCam++ with ScoreCam.
+There are multiple methods for producing saliency maps to explain how a particular model is making predictions. In PyTorch, the Captum library provides several implementations, including LayerGradCam and Integrated Gradients. Use this code to compare a GradCAM-based approach with a different attribution method.
 
 ```python
+from captum.attr import LayerGradCam, IntegratedGradients
+
+# Initialize two different explainability algorithms
+lgc = LayerGradCam(model, model.conv7)
+ig = IntegratedGradients(model)
+
 def plot_map2(cam1, cam2, classe, prediction, img):
     """
     Plot the image.
@@ -118,6 +117,7 @@ def plot_map2(cam1, cam2, classe, prediction, img):
     axes[0].imshow(np.squeeze(img), cmap='gray')
     axes[1].imshow(np.squeeze(img), cmap='gray')
     axes[2].imshow(np.squeeze(img), cmap='gray')
+    
     heatmap1 = np.uint8(cm.jet(cam1[0])[..., :3] * 255)
     heatmap2 = np.uint8(cm.jet(cam2[0])[..., :3] * 255)
     i = axes[1].imshow(heatmap1, cmap="jet", alpha=0.5)
@@ -127,28 +127,23 @@ def plot_map2(cam1, cam2, classe, prediction, img):
 
 # Plot each image with accompanying saliency map
 for image_id in range(10):
-    SEED_INPUT = dataset_test[image_id]
-    CATEGORICAL_INDEX = [0]
-
-    layer_idx = 18
-    penultimate_layer_idx = 13
-    class_idx  = 0
-
-    cat_score = labels_test[image_id]
-    cat_score = CategoricalScore(CATEGORICAL_INDEX)
-    cam = gradcam(cat_score, SEED_INPUT, 
-                  penultimate_layer = penultimate_layer_idx,
-                  normalize_cam=True)
-    cam2 = scorecam(cat_score, SEED_INPUT, 
-                  penultimate_layer = penultimate_layer_idx,
-                  normalize_cam=True
-                  )
+    SEED_INPUT = torch.tensor(dataset_test[image_id], dtype=torch.float32).unsqueeze(0)
+    
+    # Attribution 1: LayerGradCam
+    cam1 = lgc.attribute(SEED_INPUT, target=0).detach().cpu().numpy()
+    
+    # Attribution 2: Integrated Gradients
+    cam2 = ig.attribute(SEED_INPUT, target=0).detach().cpu().numpy()
+    # IG produces a map the size of the input; we average over channels for visualization
+    cam2 = np.mean(cam2, axis=1) 
     
     # Display the class
     _class = 'normal' if labels_test[image_id] == 0 else 'effusion'
-    _prediction = best_model.predict(dataset_test[image_id][np.newaxis, : ,...], verbose=0)
+    model.eval()
+    with torch.no_grad():
+        _prediction = model(SEED_INPUT).item()
     
-    plot_map2(cam, cam2, _class, _prediction[0][0], SEED_INPUT)
+    plot_map2(cam1, cam2, _class, _prediction, SEED_INPUT)
 ```
 
 Some of the time these methods largely agree:
@@ -169,7 +164,7 @@ With these three pieces of knowledge it should be possible to identify algorithm
 :::::::::::::::::::::::::::::::::::::::: keypoints
 
 - Saliency maps visualize which parts of an image contribute most to a model’s prediction.
-- GradCAM++ and ScoreCAM are commonly used techniques for generating saliency maps in convolutional models.
+- GradCAM and Integrated Gradients are commonly used techniques for generating saliency maps in convolutional models.
 - Saliency maps can help build trust in a model, but they may not always reflect true model behavior.
 - Explainability methods should be interpreted cautiously and validated carefully.
 
